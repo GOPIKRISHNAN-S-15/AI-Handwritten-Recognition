@@ -1,0 +1,586 @@
+/* ══════════════════════════════════════════════════════════════════════════════
+   HWR LAB — Computer Vision Research Workstation
+   Design Philosophy: Instrument Panel / Engineering Lab
+   Palette: Paper-dark slate (#17191d), Ink (#e8eaed), Signal Amber (#f0a500),
+            Scope Cyan (#4fc3f7) — used sparingly as functional accents only.
+   Typography: IBM Plex Sans (display) + IBM Plex Mono (data). NO glows, NO
+   gradients on cards, NO large hero sections, restrained transitions.
+   ══════════════════════════════════════════════════════════════════════════════ */
+
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600;700&display=swap');
+
+/* ── CSS Tokens ── */
+:root {
+    --bg-primary: #17191d;
+    --bg-secondary: #1d2026;
+    --bg-card: #20232a;
+    --bg-elevated: #262a32;
+    --border: #33383f;
+    --border-strong: #444a53;
+    --accent-amber: #f0a500;
+    --accent-cyan: #4fc3f7;
+    --accent-green: #7bc96f;
+    --accent-red: #e87a6c;
+    --accent-purple: #9a8fd4;
+
+    --text-primary: #e8eaed;
+    --text-secondary: #9da4ad;
+    --text-muted: #6b727c;
+
+    --font-display: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+    --font-mono: 'IBM Plex Mono', 'Consolas', monospace;
+
+    --rule: 1px solid var(--border);
+    --rule-strong: 1px solid var(--border-strong);
+}
+
+/* ── Global Base ── */
+html, body, .stApp {
+    font-family: var(--font-display) !important;
+    background-color: var(--bg-primary) !important;
+    color: var(--text-primary) !important;
+}
+
+.stApp > header {
+    background: transparent !important;
+}
+
+.main .block-container {
+    padding-top: 1.2rem !important;
+    padding-bottom: 4rem !important;
+    max-width: 1320px !important;
+}
+
+#MainMenu, footer, .stDeployButton {
+    display: none !important;
+}
+
+/* ── Custom Scrollbar ── */
+::-webkit-scrollbar {
+    width: 5px;
+    height: 5px;
+}
+::-webkit-scrollbar-track {
+    background: var(--bg-primary);
+}
+::-webkit-scrollbar-thumb {
+    background: var(--border-strong);
+}
+
+/* ── Status dot base ── */
+.lab-dot {
+    display: inline-block;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background-color: currentColor;
+}
+
+/* ── Top App Bar — instrument strip, flat, ruled edges ── */
+.top-app-bar {
+    background: var(--bg-secondary);
+    border: var(--rule);
+    border-bottom: 2px solid var(--border-strong);
+    padding: 0.65rem 1.2rem;
+    margin-bottom: 1.4rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.top-bar-brand {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.top-bar-title {
+    font-family: var(--font-mono);
+    font-weight: 600;
+    font-size: 1rem;
+    color: var(--text-primary);
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+}
+
+.top-bar-version {
+    font-family: var(--font-mono);
+    font-size: 0.66rem;
+    color: var(--text-muted);
+    border-left: var(--rule-strong);
+    padding-left: 12px;
+    margin-left: 4px;
+    letter-spacing: 0.1em;
+}
+
+.top-bar-status {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+}
+
+/* ── Sidebar ── */
+section[data-testid="stSidebar"] {
+    background: var(--bg-secondary) !important;
+    border-right: var(--rule) !important;
+}
+
+.sidebar-brand-siri {
+    padding: 1rem 0.5rem 0.9rem;
+    border-bottom: var(--rule-strong);
+    margin-bottom: 1rem;
+}
+
+.sidebar-logo-text {
+    font-family: var(--font-mono);
+    font-size: 1.05rem;
+    font-weight: 700;
+    letter-spacing: 0.22em;
+    color: var(--text-primary);
+}
+
+.sidebar-sub-text {
+    font-family: var(--font-mono);
+    font-size: 0.62rem;
+    color: var(--text-muted);
+    letter-spacing: 0.25em;
+    text-transform: uppercase;
+    margin-top: 5px;
+}
+
+/* ── Header strip — flat bar with a mono system path, no hero card ── */
+.hero-hud {
+    padding: 1.1rem 1.4rem;
+    background: var(--bg-secondary);
+    border: var(--rule);
+    border-left: 3px solid var(--accent-amber);
+    margin-bottom: 1.4rem;
+}
+
+.hero-hud-title {
+    font-family: var(--font-mono);
+    font-size: 1.35rem;
+    font-weight: 700;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--text-primary);
+    margin-bottom: 0.2rem;
+}
+
+.hero-hud-desc {
+    color: var(--text-secondary);
+    font-size: 0.85rem;
+    line-height: 1.55;
+}
+
+/* ── Telemetry gauge strip — ruled cells, flat, dense ── */
+.gauges-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+    gap: 0;
+    margin-bottom: 1.6rem;
+    border: var(--rule);
+    background: var(--bg-card);
+}
+
+.gauge-card {
+    border: none;
+    border-right: var(--rule);
+    padding: 0.9rem 1rem;
+    position: relative;
+}
+
+.gauge-card::after {
+    content: attr(data-lab);
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 3px;
+    height: 3px;
+    background: var(--border-strong);
+}
+
+.gauge-label {
+    font-family: var(--font-mono);
+    font-size: 0.6rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.18em;
+    margin-bottom: 7px;
+}
+
+.gauge-value {
+    font-family: var(--font-mono);
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    letter-spacing: -0.01em;
+}
+
+.gauge-meta {
+    font-family: var(--font-mono);
+    font-size: 0.6rem;
+    color: var(--text-muted);
+    margin-top: 5px;
+    letter-spacing: 0.08em;
+}
+
+/* ── Section headers — mono uppercase with index rule ── */
+.section-hud-header {
+    margin: 2rem 0 1.2rem;
+    padding-bottom: 0.55rem;
+    border-bottom: var(--rule-strong);
+}
+
+.section-hud-title {
+    font-family: var(--font-mono);
+    font-size: 0.95rem;
+    font-weight: 700;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--text-primary);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.section-hud-title::before {
+    content: "//";
+    color: var(--accent-amber);
+    font-weight: 700;
+}
+
+.section-hud-sub {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    margin-top: 0.25rem;
+}
+
+/* ── Panels — flat, sharp corners, ruled borders ── */
+.glass-panel {
+    background: var(--bg-card);
+    border: var(--rule);
+    padding: 1.2rem;
+    margin-bottom: 1.2rem;
+}
+
+/* ── Feature / module index — a ledger, not tiles ── */
+.feature-grid-siri {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 0;
+    margin-bottom: 1.6rem;
+    border: var(--rule);
+    background: var(--bg-card);
+}
+
+.feature-tile {
+    border-right: var(--rule);
+    border-bottom: var(--rule);
+    padding: 1.1rem 1.2rem;
+    position: relative;
+}
+
+.feature-tile::before {
+    content: "";
+    position: absolute;
+    top: 0; left: 0;
+    width: 3px;
+    height: 100%;
+    background: var(--accent-amber);
+    opacity: 0;
+    transition: opacity 0.18s ease;
+}
+
+.feature-tile:hover::before {
+    opacity: 1;
+}
+
+.tile-title {
+    font-family: var(--font-mono);
+    font-size: 0.82rem;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--text-primary);
+    margin-bottom: 0.5rem;
+}
+
+.tile-desc {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    line-height: 1.5;
+}
+
+/* ── Prediction HUD — scope readout: flat panel, mono numerals ── */
+.prediction-hud {
+    background: var(--bg-card);
+    border: var(--rule);
+    border-left: 3px solid var(--accent-amber);
+    padding: 1.8rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+
+.prediction-hud-tag {
+    font-family: var(--font-mono);
+    font-size: 0.65rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    letter-spacing: 0.25em;
+    text-transform: uppercase;
+    margin-bottom: 0.9rem;
+}
+
+.prediction-hud-char {
+    font-family: var(--font-mono);
+    font-size: 4.2rem;
+    font-weight: 700;
+    line-height: 1;
+    color: var(--text-primary);
+    margin: 0.3rem 0;
+}
+
+.prediction-hud-conf {
+    font-family: var(--font-mono);
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+    margin-bottom: 1.2rem;
+    letter-spacing: 0.1em;
+}
+
+.prediction-meta-row span {
+    font-family: var(--font-mono);
+    font-size: 0.68rem;
+    color: var(--text-muted);
+    border: var(--rule);
+    padding: 3px 8px;
+    letter-spacing: 0.06em;
+}
+
+/* ── Candidate probability bars — oscilloscope style ── */
+.candidate-bar {
+    margin: 9px 0;
+}
+
+.candidate-bar-label {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-family: var(--font-mono);
+    font-size: 0.74rem;
+    margin-bottom: 4px;
+    color: var(--text-secondary);
+}
+
+.candidate-bar-track {
+    height: 4px;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border);
+    overflow: hidden;
+}
+
+.candidate-bar-fill {
+    height: 100%;
+    background: var(--accent-amber);
+    transition: width 0.4s ease;
+}
+
+/* ── Pipeline nodes — terminal chain ── */
+.pipeline-node-grid {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    flex-wrap: wrap;
+    gap: 0;
+    margin: 0.8rem 0;
+}
+
+.pipe-node {
+    padding: 6px 12px;
+    border: var(--rule);
+    background: var(--bg-secondary);
+    font-family: var(--font-mono);
+    font-size: 0.64rem;
+    letter-spacing: 0.12em;
+    text-align: center;
+    min-width: 110px;
+    color: var(--text-muted);
+}
+
+.pipe-node[style*="var(--text-primary)"] {
+    color: var(--text-primary);
+    border-color: var(--border-strong);
+}
+
+.pipe-arrow {
+    color: var(--accent-amber);
+    font-size: 0.75rem;
+    margin: 0 5px;
+    opacity: 0.85;
+}
+
+/* ── Entity groups — ledger sections ── */
+.entity-container {
+    background: var(--bg-card);
+    border: var(--rule);
+    padding: 1.2rem;
+}
+
+.entity-group-header {
+    font-family: var(--font-mono);
+    font-size: 0.66rem;
+    font-weight: 600;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin-bottom: 8px;
+}
+
+.entity-group {
+    margin-bottom: 1rem;
+}
+
+.entity-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.entity-chip {
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    padding: 3px 8px;
+    border: var(--rule);
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+}
+
+/* ── Streamlit Controls — restrained, flat, mono ── */
+.stButton > button {
+    background: var(--accent-amber) !important;
+    color: #17191d !important;
+    font-family: var(--font-mono) !important;
+    font-weight: 600 !important;
+    font-size: 0.78rem !important;
+    letter-spacing: 0.08em !important;
+    text-transform: uppercase !important;
+    border: 1px solid var(--accent-amber) !important;
+    border-radius: 0 !important;
+    padding: 0.55rem 1.3rem !important;
+    transition: filter 0.15s ease !important;
+    box-shadow: none !important;
+}
+
+.stButton > button:hover {
+    filter: brightness(1.08);
+    transform: none !important;
+}
+
+.stButton > button[kind="secondary"] {
+    background: transparent !important;
+    color: var(--text-primary) !important;
+    border: var(--rule-strong) !important;
+}
+
+.stDownloadButton > button {
+    background: transparent !important;
+    color: var(--text-primary) !important;
+    border: var(--rule) !important;
+    border-radius: 0 !important;
+    font-family: var(--font-mono) !important;
+    font-weight: 600 !important;
+    font-size: 0.72rem !important;
+    letter-spacing: 0.08em !important;
+    text-transform: uppercase !important;
+    transition: border-color 0.15s ease !important;
+}
+
+.stDownloadButton > button:hover {
+    border-color: var(--border-strong) !important;
+}
+
+/* Input Fields */
+.stTextInput > div > div > input,
+.stTextArea > div > div > textarea,
+.stSelectbox > div > div {
+    background: var(--bg-secondary) !important;
+    border: var(--rule) !important;
+    border-radius: 0 !important;
+    color: var(--text-primary) !important;
+    font-family: var(--font-mono) !important;
+    font-size: 0.82rem !important;
+}
+
+.stTextInput > div > div > input:focus,
+.stTextArea > div > div > textarea:focus {
+    border-color: var(--accent-cyan) !important;
+    box-shadow: none !important;
+}
+
+/* File Uploader */
+section[data-testid="stFileUploader"] {
+    border: 1px dashed var(--border-strong) !important;
+    border-radius: 0 !important;
+    background: var(--bg-secondary) !important;
+    padding: 1.4rem !important;
+}
+
+/* Expanders */
+.streamlit-expanderHeader {
+    background: var(--bg-secondary) !important;
+    border: var(--rule) !important;
+    border-radius: 0 !important;
+    color: var(--text-primary) !important;
+    font-family: var(--font-mono) !important;
+    font-weight: 600 !important;
+    font-size: 0.78rem !important;
+}
+
+/* Tabs */
+.stTabs [data-baseweb="tab-list"] {
+    background: var(--bg-secondary);
+    border: var(--rule);
+    padding: 0;
+    border-radius: 0;
+}
+
+.stTabs [data-baseweb="tab"] {
+    border-radius: 0;
+    color: var(--text-secondary);
+    font-family: var(--font-mono);
+    font-weight: 600;
+    font-size: 0.75rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 0.5rem 1rem !important;
+}
+
+.stTabs [aria-selected="true"] {
+    background: var(--bg-card) !important;
+    color: var(--accent-amber) !important;
+    border-bottom: 2px solid var(--accent-amber) !important;
+}
+
+/* ── Mobile View Adjustments (Portrait) ── */
+@media (max-width: 768px) {
+    .top-app-bar {
+        padding: 0.5rem 0.9rem;
+    }
+    .hero-hud-title {
+        font-size: 1rem;
+    }
+    .gauges-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    .feature-grid-siri {
+        grid-template-columns: 1fr;
+    }
+    .prediction-hud-char {
+        font-size: 3.4rem;
+    }
+}
