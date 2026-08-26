@@ -48,7 +48,12 @@ class ImageAnalyzer:
 
         # Convert to grayscale if needed
         if len(image.shape) == 3:
-            gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+            if image.shape[2] == 1:
+                gray = image[:, :, 0].copy()
+            elif image.shape[2] == 4:
+                gray = cv2.cvtColor(image, cv2.COLOR_BGRA2GRAY)
+            else:
+                gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
         else:
             gray = image.copy()
 
@@ -177,8 +182,14 @@ class AdaptivePreprocessor:
 
         # 2. Grayscale
         if len(image.shape) == 3:
-            gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-            analysis.applied_operations.append("Grayscale conversion")
+            if image.shape[2] == 1:
+                gray = image[:, :, 0].copy()
+            elif image.shape[2] == 4:
+                gray = cv2.cvtColor(image, cv2.COLOR_BGRA2GRAY)
+                analysis.applied_operations.append("Grayscale conversion")
+            else:
+                gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+                analysis.applied_operations.append("Grayscale conversion")
         else:
             gray = image.copy()
         debug_stages["grayscale"] = gray.copy()

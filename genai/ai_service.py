@@ -60,31 +60,27 @@ class GeminiService:
 
     @staticmethod
     def _get_api_key() -> Optional[str]:
-        """Get API key from Streamlit secrets or environment variables."""
-        # Try Streamlit secrets first
+        """Get API key from Streamlit secrets (Streamlit Cloud) or .env file (local)."""
+        # 1. Try Streamlit secrets (for Streamlit Community Cloud)
         try:
             import streamlit as st
-            if hasattr(st, 'secrets') and "GEMINI_API_KEY" in st.secrets:
+            if hasattr(st, "secrets") and "GEMINI_API_KEY" in st.secrets:
                 key = st.secrets["GEMINI_API_KEY"]
-                if key and key != "your-gemini-api-key-here":
-                    return key
+                if key and str(key).strip() and str(key).strip() != "your-gemini-api-key-here":
+                    return str(key).strip()
         except Exception:
             pass
 
-        # Try environment variables
-        key = os.environ.get("GEMINI_API_KEY", "")
-        if key and key != "your-gemini-api-key-here":
-            return key
-
-        # Try .env file
+        # 2. Fall back to environment / .env file (local development)
         try:
             from dotenv import load_dotenv
-            load_dotenv()
-            key = os.environ.get("GEMINI_API_KEY", "")
-            if key and key != "your-gemini-api-key-here":
-                return key
+            load_dotenv(override=True)
         except ImportError:
             pass
+
+        key = os.environ.get("GEMINI_API_KEY", "")
+        if key and key.strip() and key.strip() != "your-gemini-api-key-here":
+            return key.strip()
 
         return None
 

@@ -21,6 +21,8 @@ def load_css():
             st.markdown(f"<style>{css}</style>", unsafe_allow_html=True)
     except Exception as e:
         print(f"Error loading CSS: {e}")
+        
+    apply_global_dropdown_fix()
 
 
 def _render_html(html_content: str):
@@ -283,3 +285,37 @@ def render_entity_cards(entities: Dict[str, List[str]]):
     </div>
     """
     _render_html(html)
+
+
+def apply_global_dropdown_fix():
+    """Inject JavaScript to make Streamlit selectboxes strictly non-editable globally."""
+    import streamlit.components.v1 as components
+    js_code = """
+    <script>
+    const doc = window.parent.document;
+    function fixDropdowns() {
+        const inputs = doc.querySelectorAll('div[data-baseweb="select"] input');
+        inputs.forEach(input => {
+            if (!input.dataset.fixedDropdown) {
+                input.dataset.fixedDropdown = "true";
+                input.setAttribute('readonly', 'readonly');
+                input.style.caretColor = 'transparent';
+                input.style.cursor = 'pointer';
+                
+                input.addEventListener('keydown', (e) => {
+                    if (e.key === 'Backspace' || e.key === 'Delete' || e.key.length === 1) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                    }
+                }, true);
+            }
+        });
+    }
+    // Run immediately
+    fixDropdowns();
+    // Run on any DOM mutations (like changing tabs or new selectboxes)
+    const observer = new MutationObserver(() => fixDropdowns());
+    observer.observe(doc.body, { childList: true, subtree: true });
+    </script>
+    """
+    components.html(js_code, height=0, width=0)

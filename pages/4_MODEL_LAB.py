@@ -1,33 +1,24 @@
 """
 Synthetic Intelligence Research Interface (SIRI) — Model Lab
-Confusion matrix heatmaps, per-class error distribution, and technical metrics.
+Overview of the four-model architecture and experimental findings.
 """
 
 import streamlit as st
-import numpy as np
-import pandas as pd
 
 from utils.ui_components import (
     load_css, render_top_app_bar, render_sidebar_drawer,
     render_section_hud_header,
 )
-from utils.constants import MNIST_INFO, EMNIST_BALANCED_INFO
 from models.cnn_model import load_trained_model
 from genai.ai_service import get_genai_service
-from analytics.model_analysis import (
-    load_evaluation, plot_confusion_matrix_plotly,
-    plot_per_class_metrics, get_confused_pairs_table,
-    get_metrics_summary,
-)
 
 # ── Page Config ──
 st.set_page_config(page_title="MODEL LAB — HWR LAB", page_icon="🔬", layout="wide")
 load_css()
 
 # ── System Runtime Checks ──
-mnist_model = load_trained_model("mnist")
 emnist_model = load_trained_model("emnist")
-cnn_loaded = mnist_model is not None or emnist_model is not None
+cnn_loaded = emnist_model is not None
 genai_service = get_genai_service()
 genai_available = genai_service.check_connection() if hasattr(genai_service, 'check_connection') else genai_service.is_available
 
@@ -42,134 +33,106 @@ render_sidebar_drawer(cnn_loaded, genai_available)
 
 # ── Header ──
 render_section_hud_header(
-    "MODEL LAB",
-    "Technical inspection of model architecture, empirical evaluation metrics, and error analytics."
+    "MODEL LAB ARCHITECTURE",
+    "Technical inspection of the four-model recognition architecture and empirical observations."
 )
 
-# ── Model Selector ──
-# Gating: only models that are actually loaded AND evaluated can be
-# inspected. This prevents a "selected EMNIST, shown MNIST metrics"
-# mismatch.
-ready_options = []
-if mnist_model is not None and load_evaluation("mnist") is not None:
-    ready_options.append("DIGITS -> MNIST (0-9)")
-if emnist_model is not None and load_evaluation("emnist") is not None:
-    ready_options.append("CHARACTERS -> EMNIST (Balanced)")
+st.html("<div style='height: 10px;'></div>")
 
-if not ready_options:
-    st.error("⚠️ No inspected model is available (model file + evaluation artifacts missing).")
-    st.stop()
+col1, col2 = st.columns(2)
 
-model_tab = st.selectbox(
-    "ACTIVE MODEL INSPECTION",
-    ready_options,
-    key="intelligence_model",
-)
+with col1:
+    st.html("""
+<div style="background: var(--bg-card); border: 1px solid var(--border-glass); border-left: 4px solid var(--accent-orange); border-radius: 4px; padding: 1.5rem; height: 100%;">
+    <div style="font-family: var(--font-primary); font-size: 1.2rem; color: var(--accent-orange); font-weight: 600; margin-bottom: 1rem;">Custom CNN</div>
+    <table style="width: 100%; border-collapse: collapse; font-family: var(--font-mono); font-size: 0.85rem; color: var(--text-primary);">
+        <tr style="border-bottom: 1px solid var(--border-glass);"><td style="padding: 8px 0; color: var(--text-secondary);">Architecture</td><td style="padding: 8px 0; text-align: right;">CNN</td></tr>
+        <tr style="border-bottom: 1px solid var(--border-glass);"><td style="padding: 8px 0; color: var(--text-secondary);">Dataset</td><td style="padding: 8px 0; text-align: right;">EMNIST Balanced</td></tr>
+        <tr style="border-bottom: 1px solid var(--border-glass);"><td style="padding: 8px 0; color: var(--text-secondary);">Classes</td><td style="padding: 8px 0; text-align: right;">47</td></tr>
+        <tr style="border-bottom: 1px solid var(--border-glass);"><td style="padding: 8px 0; color: var(--text-secondary);">Task</td><td style="padding: 8px 0; text-align: right;">Character classification</td></tr>
+        <tr><td style="padding: 8px 0; color: var(--text-secondary);">Test Accuracy</td><td style="padding: 8px 0; text-align: right; color: var(--accent-orange); font-weight: bold;">89.5%</td></tr>
+    </table>
+</div>
+""")
 
-is_mnist = "MNIST" in model_tab
-info = MNIST_INFO if is_mnist else EMNIST_BALANCED_INFO
-model_type = "mnist" if is_mnist else "emnist"
-model = mnist_model if is_mnist else emnist_model
+with col2:
+    st.html("""
+<div style="background: var(--bg-card); border: 1px solid var(--border-glass); border-left: 4px solid var(--accent-cyan); border-radius: 4px; padding: 1.5rem; height: 100%;">
+    <div style="font-family: var(--font-primary); font-size: 1.2rem; color: var(--accent-cyan); font-weight: 600; margin-bottom: 1rem;">TrOCR</div>
+    <table style="width: 100%; border-collapse: collapse; font-family: var(--font-mono); font-size: 0.85rem; color: var(--text-primary);">
+        <tr style="border-bottom: 1px solid var(--border-glass);"><td style="padding: 8px 0; color: var(--text-secondary);">Architecture</td><td style="padding: 8px 0; text-align: right;">Transformer</td></tr>
+        <tr style="border-bottom: 1px solid var(--border-glass);"><td style="padding: 8px 0; color: var(--text-secondary);">Task</td><td style="padding: 8px 0; text-align: right;">Handwritten text recognition</td></tr>
+        <tr><td style="padding: 8px 0; color: var(--text-secondary);">Input</td><td style="padding: 8px 0; text-align: right;">Text-line image</td></tr>
+    </table>
+</div>
+""")
 
-evaluation = load_evaluation(model_type)
+st.html("<div style='height: 15px;'></div>")
 
-if not evaluation:
-    st.error("Evaluation telemetry not found for this model. Run model evaluation first.")
-    st.stop()
+col3, col4 = st.columns(2)
 
-metrics = get_metrics_summary(evaluation)
+with col3:
+    st.html("""
+<div style="background: var(--bg-card); border: 1px solid var(--border-glass); border-left: 4px solid var(--accent-purple); border-radius: 4px; padding: 1.5rem; height: 100%;">
+    <div style="font-family: var(--font-primary); font-size: 1.2rem; color: var(--accent-purple); font-weight: 600; margin-bottom: 1rem;">CNN-BiLSTM-CTC</div>
+    <table style="width: 100%; border-collapse: collapse; font-family: var(--font-mono); font-size: 0.85rem; color: var(--text-primary);">
+        <tr style="border-bottom: 1px solid var(--border-glass);"><td style="padding: 8px 0; color: var(--text-secondary);">Architecture</td><td style="padding: 8px 0; text-align: right;">CNN + BiLSTM + CTC</td></tr>
+        <tr style="border-bottom: 1px solid var(--border-glass);"><td style="padding: 8px 0; color: var(--text-secondary);">Dataset</td><td style="padding: 8px 0; text-align: right;">IAM</td></tr>
+        <tr style="border-bottom: 1px solid var(--border-glass);"><td style="padding: 8px 0; color: var(--text-secondary);">Task</td><td style="padding: 8px 0; text-align: right;">Handwritten text recognition</td></tr>
+        <tr><td style="padding: 8px 0; color: var(--text-secondary);">Strength</td><td style="padding: 8px 0; text-align: right;">Connected/cursive handwriting</td></tr>
+    </table>
+</div>
+""")
 
-# ── Measured inference latency (real runtime benchmark) ──
-@st.cache_data(show_spinner=False)
-def _measure_latency(_model, model_type):
-    """Benchmark the actual model on 200 real images, return median ms."""
-    import time
-    import os
-    try:
-        from tensorflow import keras
-        if model_type == "mnist":
-            (_, _), (xt, yt) = keras.datasets.mnist.load_data()
-        else:
-            npz = os.path.expanduser("~/.emnist_balanced/emnist_balanced.npz")
-            if os.path.exists(npz):
-                d = np.load(npz)
-                xt, yt = d["x_test"], d["y_test"]
-            else:
-                return None, None
-        xt = xt[:200].astype(np.float32) / 255.0
-        sample = np.random.RandomState(42).choice(xt.shape[0], 100, replace=False)
-        x_batch = xt[sample][:, :, :, None]
-        times = []
-        for _ in range(10):
-            t0 = time.perf_counter()
-            _model.predict(x_batch, verbose=0)
-            times.append((time.perf_counter() - t0) * 1000.0 / x_batch.shape[0])
-        med = float(np.median(times))
-        mn = float(np.min(times))
-        return med, mn
-    except Exception:
-        return None, None
+with col4:
+    st.html("""
+<div style="background: var(--bg-card); border: 1px solid var(--border-glass); border-left: 4px solid var(--accent-pink); border-radius: 4px; padding: 1.5rem; height: 100%;">
+    <div style="font-family: var(--font-primary); font-size: 1.2rem; color: var(--accent-pink); font-weight: 600; margin-bottom: 1rem;">Gemini</div>
+    <table style="width: 100%; border-collapse: collapse; font-family: var(--font-mono); font-size: 0.85rem; color: var(--text-primary);">
+        <tr style="border-bottom: 1px solid var(--border-glass);"><td style="padding: 8px 0; color: var(--text-secondary);">Architecture</td><td style="padding: 8px 0; text-align: right;">Multimodal generative AI</td></tr>
+        <tr style="border-bottom: 1px solid var(--border-glass);"><td style="padding: 8px 0; color: var(--text-secondary);">Model</td><td style="padding: 8px 0; text-align: right;">Gemini 3.5 Flash</td></tr>
+        <tr style="border-bottom: 1px solid var(--border-glass);"><td style="padding: 8px 0; color: var(--text-secondary);">Task</td><td style="padding: 8px 0; text-align: right;">Document transcription</td></tr>
+        <tr><td style="padding: 8px 0; color: var(--text-secondary);">Input</td><td style="padding: 8px 0; text-align: right;">Image / PDF</td></tr>
+    </table>
+</div>
+""")
 
-inference_ms, inference_min_ms = _measure_latency(model, model_type)
+st.html("<hr style='border-color: var(--border-glass); margin: 2rem 0;'>")
 
 # ══════════════════════════════════════════════
-# TECHNICAL INFORMATION
+# EXPERIMENTAL FINDINGS
 # ══════════════════════════════════════════════
-render_section_hud_header("ARCHITECTURE & METRICS")
+render_section_hud_header("CURRENT EXPERIMENTAL FINDINGS", "Observations derived from current document testing set.")
 
-col_arch, col_metrics = st.columns(2)
-
-with col_arch:
-    st.markdown(f"""
-    <div style="background: var(--bg-card); border: 1px solid var(--border-glass); border-radius: 4px; padding: 1.5rem;">
-        <div style="font-family: var(--font-mono); font-size: 0.75rem; color: var(--text-muted); margin-bottom: 1rem; text-transform: uppercase;">ARCHITECTURE SPECIFICATION</div>
-        <table style="width: 100%; border-collapse: collapse; font-family: var(--font-mono); font-size: 0.85rem; color: var(--text-primary);">
-            <tr style="border-bottom: 1px solid var(--border-glass);"><td style="padding: 8px 0; color: var(--text-secondary);">Active Model</td><td style="padding: 8px 0; text-align: right;">{info['name']}</td></tr>
-            <tr style="border-bottom: 1px solid var(--border-glass);"><td style="padding: 8px 0; color: var(--text-secondary);">Dataset</td><td style="padding: 8px 0; text-align: right;">{info.get('train_samples', 0) + info.get('test_samples', 0):,} samples</td></tr>
-            <tr style="border-bottom: 1px solid var(--border-glass);"><td style="padding: 8px 0; color: var(--text-secondary);">Classes</td><td style="padding: 8px 0; text-align: right;">{info['num_classes']}</td></tr>
-            <tr style="border-bottom: 1px solid var(--border-glass);"><td style="padding: 8px 0; color: var(--text-secondary);">Input Size</td><td style="padding: 8px 0; text-align: right;">28x28x1</td></tr>
-            <tr><td style="padding: 8px 0; color: var(--text-secondary);">Parameters</td><td style="padding: 8px 0; text-align: right;">{model.count_params():,} (measured)</td></tr>
-        </table>
+st.html("""
+<div style="display: flex; flex-direction: column; gap: 1rem;">
+    <div style="background: var(--bg-secondary); border-left: 4px solid var(--accent-orange); border-radius: 4px; padding: 1.2rem;">
+        <div style="font-family: var(--font-mono); font-size: 0.75rem; color: var(--text-muted); margin-bottom: 4px; text-transform: uppercase;">Canvas Input</div>
+        <div style="font-family: var(--font-primary); font-size: 1.1rem; color: var(--text-primary); font-weight: 600; margin-bottom: 4px;">Custom CNN</div>
+        <div style="font-size: 0.9rem; color: var(--text-secondary);">Best suited to isolated character recognition.</div>
     </div>
-    """, unsafe_allow_html=True)
 
-with col_metrics:
-    st.markdown(f"""
-    <div style="background: var(--bg-card); border: 1px solid var(--border-glass); border-radius: 4px; padding: 1.5rem;">
-        <div style="font-family: var(--font-mono); font-size: 0.75rem; color: var(--text-muted); margin-bottom: 1rem; text-transform: uppercase;">EVALUATION METRICS</div>
-        <table style="width: 100%; border-collapse: collapse; font-family: var(--font-mono); font-size: 0.85rem; color: var(--text-primary);">
-            <tr style="border-bottom: 1px solid var(--border-glass);"><td style="padding: 8px 0; color: var(--text-secondary);">Accuracy</td><td style="padding: 8px 0; text-align: right;">{metrics['accuracy']*100:.2f}%</td></tr>
-            <tr style="border-bottom: 1px solid var(--border-glass);"><td style="padding: 8px 0; color: var(--text-secondary);">Precision</td><td style="padding: 8px 0; text-align: right;">{metrics['precision']*100:.2f}%</td></tr>
-            <tr style="border-bottom: 1px solid var(--border-glass);"><td style="padding: 8px 0; color: var(--text-secondary);">Recall</td><td style="padding: 8px 0; text-align: right;">{metrics['recall']*100:.2f}%</td></tr>
-            <tr style="border-bottom: 1px solid var(--border-glass);"><td style="padding: 8px 0; color: var(--text-secondary);">F1 Score</td><td style="padding: 8px 0; text-align: right;">{metrics['f1_score']*100:.2f}%</td></tr>
-            <tr><td style="padding: 8px 0; color: var(--text-secondary);">Inference Time</td><td style="padding: 8px 0; text-align: right;">{"%.1f ms/sample (median, measured)" % inference_ms if inference_ms is not None else "—"}</td></tr>
-        </table>
+    <div style="background: var(--bg-secondary); border-left: 4px solid var(--accent-cyan); border-radius: 4px; padding: 1.2rem;">
+        <div style="font-family: var(--font-mono); font-size: 0.75rem; color: var(--text-muted); margin-bottom: 4px; text-transform: uppercase;">Block Handwriting</div>
+        <div style="font-family: var(--font-primary); font-size: 1.1rem; color: var(--text-primary); font-weight: 600; margin-bottom: 4px;">TrOCR</div>
+        <div style="font-size: 0.9rem; color: var(--text-secondary);">Currently strongest result in tested block-letter document.</div>
     </div>
-    """, unsafe_allow_html=True)
 
-# ══════════════════════════════════════════════
-# CONFUSION ANALYSIS
-# ══════════════════════════════════════════════
-st.markdown("<hr style='border-color: var(--border-glass); margin: 1.5rem 0;'>", unsafe_allow_html=True)
-render_section_hud_header("CONFUSION ANALYSIS")
+    <div style="background: var(--bg-secondary); border-left: 4px solid var(--accent-purple); border-radius: 4px; padding: 1.2rem;">
+        <div style="font-family: var(--font-mono); font-size: 0.75rem; color: var(--text-muted); margin-bottom: 4px; text-transform: uppercase;">Cursive Handwriting</div>
+        <div style="font-family: var(--font-primary); font-size: 1.1rem; color: var(--text-primary); font-weight: 600; margin-bottom: 4px;">CNN-BiLSTM-CTC</div>
+        <div style="font-size: 0.9rem; color: var(--text-secondary);">Currently strongest result in tested cursive document.</div>
+    </div>
 
-fig_cm = plot_confusion_matrix_plotly(evaluation, info["name"])
-st.plotly_chart(fig_cm, width='stretch')
+    <div style="background: var(--bg-secondary); border-left: 4px solid var(--accent-pink); border-radius: 4px; padding: 1.2rem;">
+        <div style="font-family: var(--font-mono); font-size: 0.75rem; color: var(--text-muted); margin-bottom: 4px; text-transform: uppercase;">Document Intelligence & Entities</div>
+        <div style="font-family: var(--font-primary); font-size: 1.1rem; color: var(--text-primary); font-weight: 600; margin-bottom: 4px;">Gemini 3.5 Flash</div>
+        <div style="font-size: 0.9rem; color: var(--text-secondary);">Best suited for zero-shot manuscript transcription and contextual error correction.</div>
+    </div>
+</div>
 
-st.markdown("<hr style='border-color: var(--border-glass); margin: 1.5rem 0;'>", unsafe_allow_html=True)
-
-# ══════════════════════════════════════════════
-# MOST CONFUSED CLASSES
-# ══════════════════════════════════════════════
-render_section_hud_header("MOST CONFUSED CLASSES")
-
-pairs_df = get_confused_pairs_table(evaluation)
-
-if not pairs_df.empty:
-    st.dataframe(
-        pairs_df.head(10),
-        width='stretch',
-        hide_index=True,
-    )
-else:
-    st.info("No significant character misclassification pairs found in this test partition.")
+<div style="margin-top: 1.5rem; padding: 1rem; border: 1px dashed var(--border-glass); border-radius: 4px; color: var(--text-muted); font-size: 0.8rem; text-align: center;">
+    <strong>Note:</strong> These are experimental observations from the current test set, not permanent universal claims. 
+    Performance may vary based on document quality, handwriting style, and preprocessing conditions.
+</div>
+""")

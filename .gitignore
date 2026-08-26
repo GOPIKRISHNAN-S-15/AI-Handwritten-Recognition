@@ -1,9 +1,9 @@
-# Environment variables
+# Environment variables & secrets
 .env
 .env.local
-
-# Streamlit secrets
 .streamlit/secrets.toml
+!.env.example
+!.streamlit/secrets.toml.example
 
 # Python
 __pycache__/
@@ -14,34 +14,55 @@ __pycache__/
 dist/
 build/
 *.egg
+.pytest_cache/
 
 # Virtual environment
 venv/
 env/
 .venv/
 
-# IDE
+# Node / Next.js (neural-scribe)
+node_modules/
+neural-scribe/node_modules/
+.next/
+neural-scribe/.next/
+
+# IDE & OS
 .vscode/
 .idea/
 *.swp
 *.swo
 *~
-
-# OS
 .DS_Store
 Thumbs.db
 desktop.ini
 
-# Model files (large, regenerate with train_model.py)
-# Uncomment these if models are too large for GitHub
-# models/*.keras
-# models/*.h5
-
-# Training artifacts that can be regenerated
-# training/*.json
-
-# Jupyter
+# Debug & temporary test artifacts
+debug_*.png
+diff_*.png
+test.docx
+test.pdf
+test.txt
+test_multi_page.pdf
+*.log
 .ipynb_checkpoints/
 
-# Logs
-*.log
+# Root scratch and simulation scripts
+/crnn_cells.py
+/fix_indent.py
+/mock_st.py
+/simulate_click.py
+/create_test_pdf.py
+/test_*.py
+/iam_readme.md
+
+
+# Legacy / experimental models (do not commit unused 8.6MB letter model)
+models/emnist_letters_model.keras
+
+# Production models (REQUIRED: do not ignore)
+!models/mnist_model.keras
+!models/emnist_model.keras
+
+
+neural-scribe/

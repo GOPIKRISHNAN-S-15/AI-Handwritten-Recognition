@@ -52,39 +52,32 @@ render_section_hud_header(
 )
 
 # ── Model Selection & Mode ──
-col_mode, col_model = st.columns(2)
+col_mode, col_info = st.columns(2)
 
 with col_mode:
-    input_mode = st.selectbox(
-        "INPUT MODE",
-        ["Interactive Drawing Canvas", "Upload Manuscript Image"],
-        key="input_mode",
-    )
+    st.html("""
+<div style="background: var(--bg-card); border: 1px solid var(--border-glass); border-radius: 4px; padding: 1rem;">
+    <div style="font-family: var(--font-primary); font-size: 1rem; color: var(--text-primary); font-weight: 600;">Interactive Drawing Canvas</div>
+    <div style="font-family: var(--font-mono); font-size: 0.8rem; color: var(--accent-green); margin-top: 4px;">● Active Input Mode</div>
+    <div style="font-family: var(--font-mono); font-size: 0.8rem; color: var(--text-secondary);">Direct tactile character input</div>
+</div>
+""")
+    input_mode = "Interactive Drawing Canvas"
 
-with col_model:
-    model_options = []
-    if mnist_model is not None:
-        model_options.append("DIGITS -> MNIST")
-    if emnist_model is not None:
-        model_options.append("CHARACTERS / MIXED -> EMNIST")
+with col_info:
+    st.html("""
+<div style="background: var(--bg-card); border: 1px solid var(--accent-orange); border-radius: 4px; padding: 1rem;">
+    <div style="font-family: var(--font-primary); font-size: 1rem; color: var(--accent-orange); font-weight: 600;">Custom CNN</div>
+    <div style="font-family: var(--font-mono); font-size: 0.8rem; color: var(--text-secondary); margin-top: 4px;">EMNIST Balanced · 47 Classes</div>
+    <div style="font-family: var(--font-mono); font-size: 0.8rem; color: var(--text-secondary);">Test Accuracy: 89.5%</div>
+</div>
+""")
 
-    if not model_options:
-        st.error("⚠️ No trained models found in `models/`. Please train models first.")
-        st.stop()
+model = emnist_model
+class_mapping = EMNIST_BALANCED_MAPPING
+model_type = "emnist"
 
-    selected_model = st.selectbox("ACTIVE MODEL", model_options, key="model_select")
-
-# Resolve model and mapping
-if selected_model == "DIGITS -> MNIST":
-    model = mnist_model
-    class_mapping = MNIST_MAPPING
-    model_type = "mnist"
-else:
-    model = emnist_model
-    class_mapping = EMNIST_BALANCED_MAPPING
-    model_type = "emnist"
-
-st.markdown("<div style='height: 10px;'></div>", unsafe_allow_html=True)
+st.html("<div style='height: 10px;'></div>")
 
 # ══════════════════════════════════════════════
 # INPUT SECTION
@@ -93,11 +86,11 @@ input_image = None
 active_step = "IMAGE_RECEIVED"
 
 if "Canvas" in input_mode:
-    st.markdown("""
-    <div style="color: var(--text-secondary); font-size: 0.85rem; margin-bottom: 0.8rem; font-family: var(--font-mono);">
-        DRAW MULTIPLE CHARACTERS IN THE WORKSPACE BELOW.
-    </div>
-    """, unsafe_allow_html=True)
+    st.html("""
+<div style="color: var(--text-secondary); font-size: 0.85rem; margin-bottom: 0.8rem; font-family: var(--font-mono);">
+    DRAW MULTIPLE CHARACTERS IN THE WORKSPACE BELOW.
+</div>
+""")
 
     try:
         from streamlit_drawable_canvas import st_canvas
@@ -117,19 +110,19 @@ if "Canvas" in input_mode:
             )
 
         with col_info:
-            st.markdown("""
-            <div class="glass-panel" style="background: var(--bg-card); border: 1px solid var(--border-glass); border-radius: 4px; padding: 1.2rem;">
-                <div style="font-size: 0.75rem; font-weight: 600; color: var(--text-primary); letter-spacing: 1px; text-transform: uppercase; margin-bottom: 0.5rem; font-family: var(--font-mono);">
-                    WORKSPACE GUIDELINES
-                </div>
-                <ul style="color: var(--text-secondary); font-size: 0.82rem; line-height: 1.8; margin: 0; padding-left: 1.2rem; font-family: var(--font-mono);">
-                    <li>Draw left-to-right</li>
-                    <li>Ensure clear separation between characters</li>
-                    <li>Auto-segmentation is active</li>
-                    <li>Use trash bin to clear</li>
-                </ul>
-            </div>
-            """, unsafe_allow_html=True)
+            st.html("""
+<div class="glass-panel" style="background: var(--bg-card); border: 1px solid var(--border-glass); border-radius: 4px; padding: 1.2rem;">
+    <div style="font-size: 0.75rem; font-weight: 600; color: var(--text-primary); letter-spacing: 1px; text-transform: uppercase; margin-bottom: 0.5rem; font-family: var(--font-mono);">
+        WORKSPACE GUIDELINES
+    </div>
+    <ul style="color: var(--text-secondary); font-size: 0.82rem; line-height: 1.8; margin: 0; padding-left: 1.2rem; font-family: var(--font-mono);">
+        <li>Draw left-to-right</li>
+        <li>Ensure clear separation between characters</li>
+        <li>Auto-segmentation is active</li>
+        <li>Use trash bin to clear</li>
+    </ul>
+</div>
+""")
 
         if canvas_result.image_data is not None:
             canvas_img = canvas_result.image_data
@@ -140,36 +133,14 @@ if "Canvas" in input_mode:
                 active_step = "PREPROCESS"
 
     except ImportError:
-        st.warning("⚠️ `streamlit-drawable-canvas-fix` is required for live canvas drawing. Please use image upload mode.")
-
-else:
-    st.markdown("""
-    <div style="color: var(--text-secondary); font-size: 0.85rem; margin-bottom: 0.8rem; font-family: var(--font-mono);">
-        UPLOAD A HANDWRITTEN IMAGE.
-    </div>
-    """, unsafe_allow_html=True)
-
-    uploaded_file = st.file_uploader(
-        "Upload handwritten characters",
-        type=SUPPORTED_IMAGE_FORMATS,
-        label_visibility="collapsed",
-        key="char_upload",
-    )
-
-    if uploaded_file is not None:
-        try:
-            pil_image = Image.open(uploaded_file).convert("RGB")
-            input_image = np.array(pil_image)
-            active_step = "PREPROCESS"
-        except Exception as e:
-            st.error(f"⚠️ Could not decode image file: {type(e).__name__}")
+        st.warning("⚠️ `streamlit-drawable-canvas-fix` is required for live canvas drawing.")
 
 
 # ══════════════════════════════════════════════
 # RECOGNITION & PREPROCESSING PIPELINE
 # ══════════════════════════════════════════════
 if input_image is not None:
-    st.markdown("<hr style='border-color: var(--border-glass); margin: 1.5rem 0;'>", unsafe_allow_html=True)
+    st.html("<hr style='border-color: var(--border-glass); margin: 1.5rem 0;'>")
     
     preprocessor = AdaptivePreprocessor(target_size=(28, 28))
     
@@ -184,7 +155,7 @@ if input_image is not None:
     
     col_img, col_timeline = st.columns([1, 1])
     with col_img:
-        st.markdown("<div style='font-family: var(--font-mono); font-size: 0.75rem; color: var(--text-muted); margin-bottom: 0.5rem;'>SEGMENTATION VIEW</div>", unsafe_allow_html=True)
+        st.html("<div style='font-family: var(--font-mono); font-size: 0.75rem; color: var(--text-muted); margin-bottom: 0.5rem;'>SEGMENTATION VIEW</div>")
         st.image(display_img, channels="BGR", width='stretch')
         
     with col_timeline:
@@ -199,7 +170,7 @@ if input_image is not None:
     
     if st.session_state.get("last_model_key") != model_key:
         st.session_state["last_model_key"] = model_key
-        print(f"--- INFERENCE: '{selected_model}' -> '{model_type}' ({model.output_shape[-1]} classes) ---")
+        print(f"--- INFERENCE: '{model_type}' ({model.output_shape[-1]} classes) ---")
         
         results = []
         for i, (crop, (x, y, w, h)) in enumerate(segments):
@@ -219,40 +190,32 @@ if input_image is not None:
         with cols[i]:
             char = result["predicted_character"]
             conf = result["confidence"] * 100
-            st.markdown(f"""
-            <div style="background: var(--bg-card); border: 1px solid var(--border-glass); border-radius: 4px; padding: 1rem; text-align: center;">
-                <div style="font-family: var(--font-primary); font-size: 2.5rem; font-weight: 600; color: var(--text-primary);">{char}</div>
-                <div style="font-family: var(--font-mono); font-size: 0.75rem; color: var(--text-secondary); margin-top: 0.5rem;">{conf:.1f}%</div>
-            </div>
-            """, unsafe_allow_html=True)
+            st.html(f"""
+<div style="background: var(--bg-card); border: 1px solid var(--border-glass); border-radius: 4px; padding: 1rem; text-align: center;">
+    <div style="font-family: var(--font-primary); font-size: 2.5rem; font-weight: 600; color: var(--text-primary);">{char}</div>
+    <div style="font-family: var(--font-mono); font-size: 0.75rem; color: var(--text-secondary); margin-top: 0.5rem;">{conf:.1f}%</div>
+</div>
+""")
             
     reconstructed_text = "".join([r["predicted_character"] for r in results])
     
-    st.markdown(f"""
-    <div style="background: var(--bg-secondary); border: 1px solid var(--border-glass); border-radius: 4px; padding: 1.5rem; text-align: center; margin-top: 1.5rem;">
-        <div style="font-family: var(--font-mono); font-size: 0.75rem; color: var(--text-muted); margin-bottom: 0.5rem;">RECONSTRUCTED TEXT</div>
-        <div style="font-family: var(--font-primary); font-size: 3rem; font-weight: 600; color: var(--text-primary); letter-spacing: 4px;">{reconstructed_text}</div>
-    </div>
-    """, unsafe_allow_html=True)
+    st.html(f"""
+<div style="background: var(--bg-secondary); border: 1px solid var(--border-glass); border-radius: 4px; padding: 1.5rem; text-align: center; margin-top: 1.5rem;">
+    <div style="font-family: var(--font-mono); font-size: 0.75rem; color: var(--text-muted); margin-bottom: 0.5rem;">RECONSTRUCTED TEXT</div>
+    <div style="font-family: var(--font-primary); font-size: 3rem; font-weight: 600; color: var(--text-primary); letter-spacing: 4px;">{reconstructed_text}</div>
+</div>
+""")
 
-    # ── Gemini AI Quick Refinement Link ──
-    active_step = "GEMINI_REFINE"
-    st.markdown("<hr style='border-color: var(--border-glass); margin: 1.5rem 0;'>", unsafe_allow_html=True)
-    render_section_hud_header("LANGUAGE LAYER ENHANCEMENT")
-
-    if genai_available:
-        if st.button("RUN LANGUAGE ENHANCEMENT", key="btn_gemini_char"):
-            with st.spinner("Processing through Language Layer..."):
-                prompt = f"The CNN recognized the handwritten text as '{reconstructed_text}'. If this looks like a misspelling of a common word, or a slight error in a sequence, provide the corrected text. Output only the corrected text."
-                gem_res = genai_service._generate(prompt, "char_verify") if hasattr(genai_service, '_generate') else genai_service.correct_text(reconstructed_text)
-                if gem_res.success:
-                    st.markdown(f"""
-                    <div style="background: var(--bg-card); border: 1px solid var(--accent-green); border-radius: 4px; padding: 1rem; margin-top: 1rem;">
-                        <div style="font-family: var(--font-mono); font-size: 0.75rem; color: var(--accent-green); margin-bottom: 0.5rem;">ENHANCED TEXT</div>
-                        <div style="font-family: var(--font-primary); font-size: 1.2rem; color: var(--text-primary);">{gem_res.content}</div>
-                    </div>
-                    """, unsafe_allow_html=True)
-                else:
-                    st.error(gem_res.error)
-    else:
-        st.info("Language Layer is currently in standby.")
+    st.html("<div style='height: 15px;'></div>")
+    
+    # ── Export Buttons ──
+    if reconstructed_text:
+        from utils.export_helper import generate_txt, generate_pdf, generate_docx
+        
+        c1, c2, c3 = st.columns(3)
+        with c1:
+            st.download_button("📄 Download TXT", data=generate_txt(reconstructed_text), file_name="capture_output.txt", mime="text/plain", key="btn_capture_txt", use_container_width=True)
+        with c2:
+            st.download_button("📄 Download PDF", data=generate_pdf(reconstructed_text), file_name="capture_output.pdf", mime="application/pdf", key="btn_capture_pdf", use_container_width=True)
+        with c3:
+            st.download_button("📄 Download DOCX", data=generate_docx(reconstructed_text), file_name="capture_output.docx", mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document", key="btn_capture_docx", use_container_width=True)

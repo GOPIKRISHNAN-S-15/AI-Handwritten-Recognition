@@ -37,9 +37,11 @@ def _live_dashboard_metrics(mnist_model):
         import numpy as np
         out = {}
         eval_m = load_evaluation("mnist")
+        eval_e = load_evaluation("emnist")
         out["mnist_accuracy"] = eval_m["test_accuracy"] if eval_m else None
-        out["emnist_accuracy"] = load_evaluation("emnist")["test_accuracy"] if load_evaluation("emnist") else None
-        out["emnist_model_present"] = os.path.exists("models/emnist_model.keras")
+        out["emnist_accuracy"] = eval_e["test_accuracy"] if eval_e else None
+        emnist_path = os.path.normpath(os.path.join(os.path.dirname(__file__), "models", "emnist_model.keras"))
+        out["emnist_model_present"] = os.path.exists(emnist_path)
         # Measured latency on MNIST
         if mnist_model is not None:
             (_, _), (xt, _) = keras.datasets.mnist.load_data()
@@ -152,14 +154,14 @@ with col_act2:
         st.switch_page("pages/2_DOCUMENTS.py")
 
 with col_act3:
+    if st.button("ANALYTICS", key="nav_analytics", width='stretch'):
+        st.switch_page("pages/3_ANALYTICS.py")
+
+with col_act4:
     if st.button("MODEL LAB", key="nav_model", width='stretch'):
         st.switch_page("pages/4_MODEL_LAB.py")
 
-with col_act4:
-    if st.button("LANGUAGE LAYER", key="nav_genai", width='stretch'):
-        st.switch_page("pages/5_LANGUAGE.py")
-
-st.markdown("<div style='height: 15px;'></div>", unsafe_allow_html=True)
+st.html("<div style='height: 15px;'></div>")
 
 # ── Pipeline Visualization ──
 render_reconstruction_pipeline(active_step="CNN_CLASSIFY")
