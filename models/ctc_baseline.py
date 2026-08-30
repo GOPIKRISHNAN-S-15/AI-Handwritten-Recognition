@@ -73,7 +73,11 @@ else:
 def load_ctc_model():
     if not TORCH_CTC_AVAILABLE:
         raise RuntimeError("PyTorch or huggingface_hub is not installed in the environment.")
-    ckpt_path = hf_hub_download(repo_id="ismatsamadov/handwriting-recognition-iam", filename="best_model.pth")
+    
+    try:
+        ckpt_path = hf_hub_download(repo_id="ismatsamadov/handwriting-recognition-iam", filename="best_model.pth")
+    except Exception as e:
+        raise RuntimeError(f"Failed to download CTC model checkpoint from Hugging Face: {e}") from e
     
     # The training script pickled CharacterMapper under __main__
     # When running under Streamlit, sys.modules['__main__'] is the streamlit CLI.
@@ -84,9 +88,7 @@ def load_ctc_model():
     try:
         checkpoint = torch.load(ckpt_path, map_location="cpu", weights_only=False)
     except Exception as e:
-        import traceback
-        st.error(f"CTC Load Traceback:\n```\n{traceback.format_exc()}\n```")
-        raise e
+        raise RuntimeError(f"Failed to load CTC checkpoint weights: {e}") from e
         
     char_mapper = checkpoint['char_mapper']
     model = CRNN(num_chars=len(char_mapper.chars))
@@ -96,6 +98,8 @@ def load_ctc_model():
     return model, char_mapper
 
 def run_ctc_on_lines(line_images, target_height=128, target_width=512):
+    if not line_images:
+        return []
     model, char_mapper = load_ctc_model()
     results = []
     
@@ -107,8 +111,10 @@ def run_ctc_on_lines(line_images, target_height=128, target_width=512):
                 img = img_arr.convert('L')
                 
             w, h = img.size
+            if w <= 0 or h <= 0:
+                continue
             # Resize proportionally to target_height=128
-            new_w = int(target_height * (w / h))
+            new_w = max(1, int(target_height * (w / h)))
             img = img.resize((new_w, target_height), Image.LANCZOS)
             
             img = np.array(img, dtype=np.float32) / 255.0

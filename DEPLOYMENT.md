@@ -12,8 +12,12 @@ what `requirements.txt` enforces:
 
 | Component | Version used for validation | Notes |
 |-----------|------------------------------|-------|
-| Python | 3.11+ | 3.10+ acceptable |
+| Python | 3.11 / 3.12 | Streamlit Community Cloud: select Python 3.11 or 3.12 (Python 3.14 unsupported due to ML wheel compatibility) |
 | TensorFlow | 2.16+ (CPU) | GPU not required |
+| PyTorch | 2.0+ (CPU) | Used for CTC CRNN & TrOCR Transformer inference |
+| Transformers | 4.38+ | Hugging Face library for `microsoft/trocr-small-handwritten` |
+| Hugging Face Hub | 0.20+ | Safe automated checkpoint downloading & caching |
+| SentencePiece | 0.1.99+ | Required by TrOCR tokenizer backend |
 | Streamlit | 1.61.1 | `st.html()` and `st.switch_page()` are used; do not downgrade below 1.45 |
 | OpenCV | 4.9+ | `opencv-python-headless` |
 | google-genai | 2.18.1 | New `google-genai` client (replaces obsolete `google.generativeai`) |
