@@ -9,6 +9,7 @@ from PIL import Image
 import cv2
 import json
 import time
+import hashlib
 
 from utils.ui_components import (
     load_css, render_top_app_bar, render_sidebar_drawer,
@@ -21,17 +22,37 @@ from preprocessing.segmentation import DocumentSegmenter, detect_spaces
 from genai.ai_service import get_genai_service
 from utils.helpers import predict_character, image_to_bytes
 
-def render_export_buttons(text_content, prefix):
+DOC_STATE_KEYS = [
+    "doc_id",
+    "has_run",
+    "doc_cnn_text",
+    "doc_trocr_text",
+    "doc_ctc_text",
+    "doc_gemini_text",
+    "doc_cnn_status",
+    "doc_trocr_status",
+    "doc_ctc_status",
+    "doc_gemini_status",
+    "doc_metrics",
+]
+
+def clear_document_state():
+    """Wipe all document-specific OCR and model output states."""
+    for k in DOC_STATE_KEYS:
+        if k in st.session_state:
+            del st.session_state[k]
+
+def render_export_buttons(text_content, prefix, doc_key=""):
     if text_content and not text_content.startswith("Not evaluated") and "⚠️" not in text_content:
         from utils.export_helper import generate_txt, generate_pdf, generate_docx
         
         c1, c2, c3 = st.columns(3)
         with c1:
-            st.download_button("📄 TXT", data=generate_txt(text_content), file_name=f"{prefix}_output.txt", mime="text/plain", key=f"btn_txt_{prefix}", use_container_width=True)
+            st.download_button("📄 TXT", data=generate_txt(text_content), file_name=f"{prefix}_output.txt", mime="text/plain", key=f"btn_txt_{prefix}_{doc_key}", use_container_width=True)
         with c2:
-            st.download_button("📄 PDF", data=generate_pdf(text_content), file_name=f"{prefix}_output.pdf", mime="application/pdf", key=f"btn_pdf_{prefix}", use_container_width=True)
+            st.download_button("📄 PDF", data=generate_pdf(text_content), file_name=f"{prefix}_output.pdf", mime="application/pdf", key=f"btn_pdf_{prefix}_{doc_key}", use_container_width=True)
         with c3:
-            st.download_button("📄 DOCX", data=generate_docx(text_content), file_name=f"{prefix}_output.docx", mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document", key=f"btn_docx_{prefix}", use_container_width=True)
+            st.download_button("📄 DOCX", data=generate_docx(text_content), file_name=f"{prefix}_output.docx", mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document", key=f"btn_docx_{prefix}_{doc_key}", use_container_width=True)
     else:
         st.caption("Run this model first to export output.")
 
@@ -80,14 +101,22 @@ st.html("""
 
 uploaded_file = st.file_uploader("Upload document image or PDF", type=SUPPORTED_IMAGE_FORMATS + ["pdf"], label_visibility="collapsed", key="doc_upload")
 
-if uploaded_file is not None:
+if uploaded_file is None:
+    # If a file was removed or is absent, ensure all stale document state is cleared
+    if st.session_state.get("doc_id") is not None:
+        clear_document_state()
+else:
+    # Compute deterministic fingerprint of uploaded content
+    raw_bytes = uploaded_file.getvalue()
+    content_hash = hashlib.sha256(raw_bytes).hexdigest()[:16]
+    base_doc_id = f"{uploaded_file.name}_{content_hash}"
+    
     try:
         if uploaded_file.name.lower().endswith(".pdf"):
             from preprocessing.pdf_handler import render_pdf_pages
             
             with st.spinner("Rendering PDF pages..."):
-                pdf_bytes = uploaded_file.getvalue()
-                images, error = render_pdf_pages(pdf_bytes)
+                images, error = render_pdf_pages(raw_bytes)
                 
             if error:
                 st.error(error)
@@ -101,12 +130,21 @@ if uploaded_file is not None:
             if len(images) > 1:
                 page_num = st.selectbox("Select Page to Process", range(1, len(images) + 1), format_func=lambda x: f"Page {x} of {len(images)}")
                 pil_image = images[page_num - 1]
+                current_doc_id = f"{base_doc_id}_p{page_num}"
             else:
                 pil_image = images[0]
+                current_doc_id = f"{base_doc_id}_p1"
                 st.info("📄 Processing single-page PDF.")
                 
         else:
             pil_image = Image.open(uploaded_file).convert("RGB")
+            current_doc_id = base_doc_id
+            
+        # Invalidate state if a different document or page was uploaded
+        if st.session_state.get("doc_id") != current_doc_id:
+            clear_document_state()
+            st.session_state["doc_id"] = current_doc_id
+            st.session_state["has_run"] = False
             
         input_image = np.array(pil_image)
 
@@ -289,6 +327,7 @@ if uploaded_file is not None:
                 else:
                     status_text.empty()
                     
+                st.session_state["doc_id"] = current_doc_id
                 st.session_state["doc_cnn_text"] = "\n\n".join(cnn_full_text)
                 st.session_state["doc_trocr_text"] = "\n\n".join(trocr_full_text)
                 st.session_state["doc_ctc_text"] = "\n\n".join(ctc_full_text)
@@ -308,7 +347,7 @@ if uploaded_file is not None:
                 
                 st.session_state["has_run"] = True
 
-        if st.session_state.get("has_run", False):
+        if st.session_state.get("has_run", False) and st.session_state.get("doc_id") == current_doc_id:
             st.html("<hr style='border-color: var(--border-glass); margin: 1.5rem 0;'>")
             render_section_hud_header("FOUR-MODEL RECOGNITION COMPARISON", "Parallel execution of architectures on input payload")
             
@@ -323,6 +362,7 @@ if uploaded_file is not None:
             gemini_text = st.session_state.get("doc_gemini_text", "")
             
             metrics = st.session_state.get("doc_metrics", {"chars": 0, "words": 0, "lines": 0, "avg_conf": 0.0})
+            doc_key = current_doc_id[:16]
             
             # Row 1
             col_m1, col_m2 = st.columns(2)
@@ -337,14 +377,14 @@ if uploaded_file is not None:
     <div style="font-family: var(--font-mono); font-size: 0.8rem; color: var(--text-secondary);">47 classes</div>
     <div style="font-family: var(--font-mono); font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 1rem;">Character-level recognition</div>
 """)
-                st.text_area("CNN Output", value=cnn_text, height=200, key="txt_cnn", label_visibility="collapsed", disabled=True)
+                st.text_area("CNN Output", value=cnn_text, height=200, key=f"txt_cnn_{doc_key}", label_visibility="collapsed", disabled=True)
                 st.html(f"""
     <div style="font-family: var(--font-mono); font-size: 0.75rem; color: var(--text-muted); margin-top: 0.5rem;">
         Metrics: {metrics['lines']} Lines | {metrics['words']} Words | {metrics['chars']} Chars | {metrics['avg_conf']:.1f}% Confidence
     </div>
 </div>
 """)
-                render_export_buttons(cnn_text, "cnn")
+                render_export_buttons(cnn_text, "cnn", doc_key)
 
             with col_m2:
                 st.html(f"""
@@ -357,14 +397,14 @@ if uploaded_file is not None:
     <div style="font-family: var(--font-mono); font-size: 0.8rem; color: var(--text-secondary);">Transformer-based HTR</div>
     <div style="font-family: var(--font-mono); font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 1rem;">Line-level recognition</div>
 """)
-                st.text_area("TrOCR Output", value=trocr_text, height=200, key="txt_trocr", label_visibility="collapsed", disabled=True)
+                st.text_area("TrOCR Output", value=trocr_text, height=200, key=f"txt_trocr_{doc_key}", label_visibility="collapsed", disabled=True)
                 st.html(f"""
     <div style="font-family: var(--font-mono); font-size: 0.75rem; color: var(--text-muted); margin-top: 0.5rem;">
         Metrics: Auto-calculated
     </div>
 </div>
 """)
-                render_export_buttons(trocr_text, "trocr")
+                render_export_buttons(trocr_text, "trocr", doc_key)
 
             st.html("<div style='height: 15px;'></div>")
             
@@ -381,14 +421,14 @@ if uploaded_file is not None:
     <div style="font-family: var(--font-mono); font-size: 0.8rem; color: var(--text-secondary);">Sequence-based HTR</div>
     <div style="font-family: var(--font-mono); font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 1rem;">Designed for connected/cursive handwriting</div>
 """)
-                st.text_area("CTC Output", value=ctc_text, height=200, key="txt_ctc", label_visibility="collapsed", disabled=True)
+                st.text_area("CTC Output", value=ctc_text, height=200, key=f"txt_ctc_{doc_key}", label_visibility="collapsed", disabled=True)
                 st.html(f"""
     <div style="font-family: var(--font-mono); font-size: 0.75rem; color: var(--text-muted); margin-top: 0.5rem;">
         Metrics: Auto-calculated
     </div>
 </div>
 """)
-                render_export_buttons(ctc_text, "ctc")
+                render_export_buttons(ctc_text, "ctc", doc_key)
 
             with col_m4:
                 st.html(f"""
@@ -401,14 +441,14 @@ if uploaded_file is not None:
     <div style="font-family: var(--font-mono); font-size: 0.8rem; color: var(--text-secondary);">Multimodal Document OCR</div>
     <div style="font-family: var(--font-mono); font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 1rem;">AI-assisted transcription</div>
 """)
-                st.text_area("Gemini Output", value=gemini_text, height=200, key="txt_gemini", label_visibility="collapsed", disabled=True)
+                st.text_area("Gemini Output", value=gemini_text, height=200, key=f"txt_gemini_{doc_key}", label_visibility="collapsed", disabled=True)
                 st.html(f"""
     <div style="font-family: var(--font-mono); font-size: 0.75rem; color: var(--text-muted); margin-top: 0.5rem;">
         Status: API Response Logged
     </div>
 </div>
 """)
-                render_export_buttons(gemini_text, "gemini")
+                render_export_buttons(gemini_text, "gemini", doc_key)
 
     except Exception as e:
         st.error(f"⚠️ Error executing document pipeline: {str(e)}")
