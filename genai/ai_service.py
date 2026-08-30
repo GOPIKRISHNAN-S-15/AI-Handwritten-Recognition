@@ -36,17 +36,30 @@ class GeminiService:
         # Possible values: "uninitialized", "ready", "quota_limited",
         # "model_unavailable", "key_missing", "network_error".
         self.status = "uninitialized"
-        # Model identifier is taken from the GEMINI_MODEL environment variable,
-        # defaulting to a currently supported model. Hardcoding an obsolete
-        # identifier (e.g. gemini-1.5-flash) is not allowed — it returns 404.
-        self.model_name = os.environ.get("GEMINI_MODEL", "gemini-3.5-flash").strip()
+        self.client = None
+        
+        # Model identifier from Streamlit secrets or environment variable
+        self.model_name = self._get_model_name()
         self._initialize()
+
+    @staticmethod
+    def _get_model_name() -> str:
+        try:
+            import streamlit as st
+            if hasattr(st, "secrets") and "GEMINI_MODEL" in st.secrets:
+                m = st.secrets["GEMINI_MODEL"]
+                if m and str(m).strip():
+                    return str(m).strip()
+        except Exception:
+            pass
+        return os.environ.get("GEMINI_MODEL", "gemini-3.5-flash").strip()
 
     def _initialize(self):
         """Initialize the Gemini client with API key from environment or Streamlit secrets."""
         api_key = self._get_api_key()
         if not api_key:
             self.is_available = False
+            self.client = None
             return
 
         try:
@@ -55,19 +68,35 @@ class GeminiService:
             self.is_available = True
         except ImportError:
             self.is_available = False
+            self.client = None
         except Exception:
             self.is_available = False
+            self.client = None
 
     @staticmethod
     def _get_api_key() -> Optional[str]:
         """Get API key from Streamlit secrets (Streamlit Cloud) or .env file (local)."""
+        invalid_placeholders = {
+            "", "your-gemini-api-key-here", "your_gemini_api_key_here",
+            "your-google-ai-studio-key", "your_api_key_here",
+        }
+
         # 1. Try Streamlit secrets (for Streamlit Community Cloud)
         try:
             import streamlit as st
-            if hasattr(st, "secrets") and "GEMINI_API_KEY" in st.secrets:
-                key = st.secrets["GEMINI_API_KEY"]
-                if key and str(key).strip() and str(key).strip() != "your-gemini-api-key-here":
-                    return str(key).strip()
+            if hasattr(st, "secrets"):
+                for key_name in ["GEMINI_API_KEY", "GOOGLE_API_KEY", "gemini_api_key", "google_api_key"]:
+                    if key_name in st.secrets:
+                        val = st.secrets[key_name]
+                        if val and str(val).strip() and str(val).strip().lower() not in invalid_placeholders:
+                            return str(val).strip()
+                # Check nested dicts e.g. [gemini] api_key = "..."
+                for sec in ["gemini", "general", "google"]:
+                    if sec in st.secrets and hasattr(st.secrets[sec], "get"):
+                        for key_name in ["api_key", "GEMINI_API_KEY", "GOOGLE_API_KEY"]:
+                            val = st.secrets[sec].get(key_name)
+                            if val and str(val).strip() and str(val).strip().lower() not in invalid_placeholders:
+                                return str(val).strip()
         except Exception:
             pass
 
@@ -78,9 +107,10 @@ class GeminiService:
         except ImportError:
             pass
 
-        key = os.environ.get("GEMINI_API_KEY", "")
-        if key and key.strip() and key.strip() != "your-gemini-api-key-here":
-            return key.strip()
+        for env_name in ["GEMINI_API_KEY", "GOOGLE_API_KEY"]:
+            key = os.environ.get(env_name, "")
+            if key and key.strip() and key.strip().lower() not in invalid_placeholders:
+                return key.strip()
 
         return None
 
@@ -106,6 +136,8 @@ class GeminiService:
             if time.perf_counter() - ts < self._PROBE_CACHE_TTL:
                 return cached_ok
 
+        if not self.client:
+            self._initialize()
         if not self.client:
             self.is_available = False
             self.status = "key_missing"

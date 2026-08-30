@@ -3,28 +3,12 @@ import streamlit as st
 from google import genai
 from google.genai import types
 
+from genai.ai_service import GeminiService
+
 @st.cache_resource
 def get_gemini_client():
     """Initializes and returns the Gemini client from Streamlit secrets or environment."""
-    api_key = None
-    try:
-        if hasattr(st, "secrets") and "GEMINI_API_KEY" in st.secrets:
-            k = st.secrets["GEMINI_API_KEY"]
-            if k and str(k).strip() and str(k).strip() != "your-gemini-api-key-here":
-                api_key = str(k).strip()
-    except Exception:
-        pass
-
-    if not api_key:
-        try:
-            from dotenv import load_dotenv
-            load_dotenv(override=True)
-        except ImportError:
-            pass
-        k = os.environ.get("GEMINI_API_KEY", "")
-        if k and k.strip() and k.strip() != "your-gemini-api-key-here":
-            api_key = k.strip()
-        
+    api_key = GeminiService._get_api_key()
     if not api_key:
         raise ValueError("GEMINI_API_KEY is not configured in Streamlit secrets or .env.")
         

@@ -18,7 +18,7 @@ def load_trocr_model():
         raise RuntimeError("PyTorch or transformers is not installed in the environment.")
     
     try:
-        processor = TrOCRProcessor.from_pretrained('microsoft/trocr-small-handwritten', use_fast=False)
+        processor = TrOCRProcessor.from_pretrained('microsoft/trocr-small-handwritten')
         model = VisionEncoderDecoderModel.from_pretrained('microsoft/trocr-small-handwritten')
     except Exception as e:
         raise RuntimeError(f"Failed to load TrOCR model from Hugging Face: {e}") from e
